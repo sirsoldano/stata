@@ -9,7 +9,7 @@ local iq kabc_mps
 local srs srs_total_t
 use "ふぁいるぱす.dta"
 // import excel "C:/brainstorm_db/AniRest/data/_afterMat/MatToExcel/`situation'/20.xlsx", sheet("Sheet1") firstrow
-label define diag 0 "TD" 1 "ASD" , replace
+label define `diagnosis' 0 "TD" 1 "ASD" , replace
 label define sex 0 "female" 1 "male" , replace
 
 generate str band = ""
@@ -54,6 +54,37 @@ foreach e of varlist `iq' `srs'{
 	replace expvar = "`diagnosis'" in 1
 	replace t = r(t) in 1
 	replace p = r(p) in 1
+}
+drop id_num-gamma_sw
+export excel using "ふぁいるぱす.xls", firstrow(variables) replace
+drop _all
+~~~
+
+## 交互作用込解析
+~~~
+set more off
+drop _all
+use "ふぁいるぱす.dta"
+generate str band = ""
+generate str index = ""
+generate str expvar = ""
+generate coef = .
+generate se = .
+generate t = .
+generate p = .
+foreach band in  "delta" "theta" "alpha" "beta" "gamma"{
+	foreach v in "sw" "cc" "pl"{
+		insobs 1, before(1)
+		replace band = "`band'" in 1
+		replace index = "`v'" in 1
+		replace expvar = "Diagnosis#Condition" in 1
+		meglm `band'_`v' diag##animation age sex ||id_num:,vce(robust)
+		matrix res = r(table)
+		replace coef = res[1,8] in 1
+		replace se = res[2,8] in 1
+		replace t = res[3,8] in 1
+		replace p = res[4,8] in 1
+	}
 }
 drop id_num-gamma_sw
 export excel using "ふぁいるぱす.xls", firstrow(variables) replace
